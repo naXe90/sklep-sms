@@ -91,7 +91,7 @@ function get_row_limit($page, $row_limit = 0)
     /** @var Settings $settings */
     $settings = app()->make(Settings::class);
 
-    $row_limit = $row_limit ? $row_limit : $settings['row_limit'];
+    $row_limit = $row_limit ?: $settings['row_limit'];
 
     return ($page - 1) * $row_limit . "," . $row_limit;
 }
@@ -101,7 +101,7 @@ function get_pagination($all, $current_page, $script, $get, $row_limit = 0)
     /** @var Settings $settings */
     $settings = app()->make(Settings::class);
 
-    $row_limit = $row_limit ? $row_limit : $settings['row_limit'];
+    $row_limit = $row_limit ?: $settings['row_limit'];
 
     // Wszystkich elementow jest mniej niz wymagana ilsoc na jednej stronie
     if ($all <= $row_limit) {
@@ -203,10 +203,7 @@ function get_pagination($all, $current_page, $script, $get, $row_limit = 0)
  */
 function is_logged()
 {
-    /** @var Auth $auth */
-    $auth = app()->make(Auth::class);
-
-    return $auth->check();
+    return app()->make(Auth::class)->check();
 }
 
 /**
@@ -219,9 +216,7 @@ function get_privilages($which, $user = null)
 {
     // Jeżeli nie podano użytkownika
     if ($user === null) {
-        /** @var Auth $auth */
-        $auth = app()->make(Auth::class);
-        $user = $auth->user();
+        $user = app()->make(Auth::class)->user();
     }
 
     if ($user === null) {
@@ -272,7 +267,7 @@ function charge_wallet($uid, $amount)
         "UPDATE `" . TABLE_PREFIX . "users` " .
         "SET `wallet` = `wallet` + '%d' " .
         "WHERE `uid` = '%d'",
-        [$amount, $uid]
+        [ $amount, $uid ]
     ));
 }
 
@@ -292,12 +287,12 @@ function update_servers_services($data)
         if ($arr['status']) {
             $add[] = $db->prepare(
                 "('%d', '%s')",
-                [$arr['server'], $arr['service']]
+                [ $arr['server'], $arr['service'] ]
             );
         } else {
             $delete[] = $db->prepare(
                 "(`server_id` = '%d' AND `service_id` = '%s')",
-                [$arr['server'], $arr['service']]
+                [ $arr['server'], $arr['service'] ]
             );
         }
     }
@@ -345,7 +340,7 @@ function validate_payment($purchase_data)
         ];
     }
 
-    if (!in_array($purchase_data->getPayment('method'), ["sms", "transfer", "wallet", "service_code"])) {
+    if (!in_array($purchase_data->getPayment('method'), [ "sms", "transfer", "wallet", "service_code" ])) {
         return [
             'status'   => "wrong_method",
             'text'     => $lang->translate('wrong_payment_method'),
@@ -359,8 +354,7 @@ function validate_payment($purchase_data)
         $payment = new Payment($transaction_service);
     } else {
         if ($purchase_data->getPayment('method') == "transfer") {
-            $transaction_service = if_strlen2($purchase_data->getPayment('transfer_service'),
-                $settings['transfer_service']);
+            $transaction_service = if_strlen2($purchase_data->getPayment('transfer_service'), $settings['transfer_service']);
             $payment = new Payment($transaction_service);
         }
     }
@@ -379,7 +373,8 @@ function validate_payment($purchase_data)
             'text'     => $lang->translate('no_login_no_wallet'),
             'positive' => false,
         ];
-    } elseif ($purchase_data->getPayment('method') == "transfer") {
+    }
+    elseif ($purchase_data->getPayment('method') == "transfer") {
         if ($purchase_data->getPayment('cost') <= 1) {
             return [
                 'status'   => "too_little_for_transfer",
@@ -395,13 +390,15 @@ function validate_payment($purchase_data)
                 'positive' => false,
             ];
         }
-    } elseif ($purchase_data->getPayment('method') == "sms" && !$payment->getPaymentModule()->supportSms()) {
+    }
+    elseif ($purchase_data->getPayment('method') == "sms" && !$payment->getPaymentModule()->supportSms()) {
         return [
             'status'   => "sms_unavailable",
             'text'     => $lang->translate('sms_unavailable'),
             'positive' => false,
         ];
-    } elseif ($purchase_data->getPayment('method') == "sms" && $purchase_data->getTariff() === null) {
+    }
+    elseif ($purchase_data->getPayment('method') == "sms" && $purchase_data->getTariff() === null) {
         return [
             'status'   => "no_sms_option",
             'text'     => $lang->translate('no_sms_payment'),
@@ -413,8 +410,7 @@ function validate_payment($purchase_data)
     $purchase_data->setPayment([
         'sms_code' => trim($purchase_data->getPayment('sms_code')),
     ]);
-    if ($purchase_data->getPayment('method') == "sms" && $warning = check_for_warnings("sms_code",
-            $purchase_data->getPayment('sms_code'))) {
+    if ($purchase_data->getPayment('method') == "sms" && $warning = check_for_warnings("sms_code", $purchase_data->getPayment('sms_code'))) {
         $warnings['sms_code'] = array_merge((array)$warnings['sms_code'], $warning);
     }
 
@@ -465,7 +461,8 @@ function validate_payment($purchase_data)
         if (is_array($payment_id)) {
             return $payment_id;
         }
-    } elseif ($purchase_data->getPayment('method') == "service_code") {
+    }
+    elseif ($purchase_data->getPayment('method') == "service_code") {
         // Dodanie informacji o płatności z portfela
         $payment_id = pay_service_code($purchase_data, $service_module);
 
@@ -475,7 +472,7 @@ function validate_payment($purchase_data)
         }
     }
 
-    if (in_array($purchase_data->getPayment('method'), ["wallet", "sms", "service_code"])) {
+    if (in_array($purchase_data->getPayment('method'), [ "wallet", "sms", "service_code" ])) {
         // Dokonujemy zakupu usługi
         $purchase_data->setPayment([
             'payment_id' => $payment_id,
@@ -486,9 +483,10 @@ function validate_payment($purchase_data)
             'status'   => "purchased",
             'text'     => $lang->translate('purchase_success'),
             'positive' => true,
-            'data'     => ['bsid' => $bought_service_id],
+            'data'     => [ 'bsid' => $bought_service_id ],
         ];
-    } elseif ($purchase_data->getPayment('method') == "transfer") {
+    }
+    elseif ($purchase_data->getPayment('method') == "transfer") {
         $purchase_data->setDesc(
             $lang->sprintf($lang->translate('payment_for_service'), $service_module->service['name'])
         );
@@ -511,7 +509,7 @@ function pay_by_admin($user_admin)
     $db->query($db->prepare(
         "INSERT INTO `" . TABLE_PREFIX . "payment_admin` (`aid`, `ip`, `platform`) " .
         "VALUES ('%d', '%s', '%s')",
-        [$user_admin->getUid(), $user_admin->getLastIp(), $user_admin->getPlatform()]
+        [ $user_admin->getUid(), $user_admin->getLastIp(), $user_admin->getPlatform() ]
     ));
 
     return $db->last_id();
@@ -548,7 +546,7 @@ function pay_wallet($cost, $user)
     $db->query($db->prepare(
         "INSERT INTO `" . TABLE_PREFIX . "payment_wallet` " .
         "SET `cost` = '%d', `ip` = '%s', `platform` = '%s'",
-        [$cost, $user->getLastIp(), $user->getPlatform()]
+        [ $cost, $user->getLastIp(), $user->getPlatform() ]
     ));
 
     return $db->last_id();
@@ -591,7 +589,7 @@ function pay_service_code($purchase_data, $service_module)
             $db->query($db->prepare(
                 "DELETE FROM `" . TABLE_PREFIX . "service_codes` " .
                 "WHERE `id` = '%d'",
-                [$row['id']]
+                [ $row['id'] ]
             ));
 
             // Dodajemy informacje o płatności kodem
@@ -669,7 +667,7 @@ function add_bought_service_info(
         "INSERT INTO `" . TABLE_PREFIX . "bought_services` " .
         "SET `uid` = '%d', `payment` = '%s', `payment_id` = '%s', `service` = '%s', " .
         "`server` = '%d', `amount` = '%s', `auth_data` = '%s', `email` = '%s', `extra_data` = '%s'",
-        [$uid, $method, $payment_id, $service, $server, $amount, $auth_data, $email, json_encode($extra_data)]
+        [ $uid, $method, $payment_id, $service, $server, $amount, $auth_data, $email, json_encode($extra_data) ]
     ));
     $bougt_service_id = $db->last_id();
 
@@ -680,14 +678,14 @@ function add_bought_service_info(
             'action'      => "email",
         ]);
         if (strlen($message)) {
-            $title = ($service == 'charge_wallet' ? $lang->translate('charge_wallet') : $lang->translate('purchase'));
+            $title = $lang->translate($service == 'charge_wallet' ? 'charge_wallet' : 'purchase'));
             $ret = $mailer->send($email, $auth_data, $title, $message);
         }
 
         if ($ret == "not_sent") {
             $ret = "nie wysłano";
-        } else {
-            if ($ret == "sent") {
+        }
+        elseif ($ret == "sent") {
                 $ret = "wysłano";
             }
         }
@@ -733,13 +731,13 @@ function purchase_info($data)
 
     // Wyszukujemy po id zakupu
     if (isset($data['purchase_id'])) {
-        $where = $db->prepare("t.id = '%d'", [$data['purchase_id']]);
+        $where = $db->prepare("t.id = '%d'", [ $data['purchase_id'] ]);
     } // Wyszukujemy po id płatności
     else {
         if (isset($data['payment']) && isset($data['payment_id'])) {
             $where = $db->prepare(
                 "t.payment = '%s' AND t.payment_id = '%s'",
-                [$data['payment'], $data['payment_id']]
+                [ $data['payment'], $data['payment_id'] ]
             );
         } else {
             return "";
@@ -876,7 +874,7 @@ function log_info($string)
     $db->query($db->prepare(
         "INSERT INTO `" . TABLE_PREFIX . "logs` " .
         "SET `text` = '%s'",
-        [$string]
+        [ $string ]
     ));
 }
 
@@ -926,7 +924,7 @@ function create_dom_element($name, $text = "", $data = [])
         $output .= $text;
     }
 
-    if (!in_array($name, ["input", "img"])) {
+    if (!in_array($name, [ "input", "img" ])) {
         $output .= "</{$name_hsafe}>";
     }
 
@@ -956,8 +954,8 @@ function get_platform($platform)
 
     if ($platform == "engine_amxx") {
         return $lang->translate('amxx_server');
-    } else {
-        if ($platform == "engine_sm") {
+    }
+    elseif ($platform == "engine_sm") {
             return $lang->translate('sm_server');
         }
     }
@@ -1095,25 +1093,23 @@ function secondsToTime($seconds)
     $translationManager = app()->make(TranslationManager::class);
     $lang = $translationManager->user();
 
-    $dtF = new DateTime("@0");
-    $dtT = new DateTime("@$seconds");
-
-    return $dtF->diff($dtT)->format("%a {$lang->translate('days')} {$lang->translate('and')} %h {$lang->translate('hours')}");
+    $date = new DateTime('@'.$seconds);
+    return "{$date->format('d')} {$lang->translate('days')} {$lang->translate('and')} {$date->format('H')} {$lang->translate('hours')}";
 }
 
 function if_isset(&$isset, $default)
 {
-    return isset($isset) ? $isset : $default;
+    return $isset ?? $default;
 }
 
 function if_strlen(&$empty, $default)
 {
-    return isset($empty) && strlen($empty) ? $empty : $default;
+    return $empty ?? $default;
 }
 
 function if_strlen2($empty, $default)
 {
-    return strlen($empty) ? $empty : $default;
+    return $empty ?: $default;
 }
 
 function mb_str_split($string)
@@ -1163,7 +1159,7 @@ function ip_in_range($ip, $range)
             $netmask = str_replace('*', '0', $netmask);
             $netmask_dec = ip2long($netmask);
 
-            return ((ip2long($ip) & $netmask_dec) == (ip2long($range) & $netmask_dec));
+            return (ip2long($ip) & $netmask_dec == ip2long($range) & $netmask_dec);
         } else {
             // $netmask is a CIDR size block
             // fix the range argument
@@ -1172,8 +1168,7 @@ function ip_in_range($ip, $range)
                 $x[] = '0';
             }
             list($a, $b, $c, $d) = $x;
-            $range = sprintf("%u.%u.%u.%u", empty($a) ? '0' : $a, empty($b) ? '0' : $b, empty($c) ? '0' : $c,
-                empty($d) ? '0' : $d);
+            $range = sprintf("%u.%u.%u.%u", $a ?: '0', $b ?: '0', $c ?: '0', $d ?: '0');
             $range_dec = ip2long($range);
             $ip_dec = ip2long($ip);
 
@@ -1181,10 +1176,10 @@ function ip_in_range($ip, $range)
             #$netmask_dec = bindec(str_pad('', $netmask, '1') . str_pad('', 32-$netmask, '0'));
 
             # Strategy 2 - Use math to create it
-            $wildcard_dec = pow(2, (32 - $netmask)) - 1;
+            $wildcard_dec = pow(2, 32 - $netmask) - 1;
             $netmask_dec = ~$wildcard_dec;
 
-            return (($ip_dec & $netmask_dec) == ($range_dec & $netmask_dec));
+            return ($ip_dec & $netmask_dec == $range_dec & $netmask_dec);
         }
     } else {
         // range might be 255.255.*.* or 1.2.3.0-1.2.3.255
@@ -1201,7 +1196,7 @@ function ip_in_range($ip, $range)
             $upper_dec = (float)sprintf("%u", ip2long($upper));
             $ip_dec = (float)sprintf("%u", ip2long($ip));
 
-            return (($ip_dec >= $lower_dec) && ($ip_dec <= $upper_dec));
+            return ($ip_dec >= $lower_dec && $ip_dec <= $upper_dec);
         }
 
         return false;
@@ -1282,7 +1277,8 @@ function log_to_file($file, $message)
     file_put_contents($file, $text);
 }
 
-function log_error($message) {
+function log_error($message)
+{
     log_to_file(app()->errorsLogPath(), $message);
 }
 
