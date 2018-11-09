@@ -75,8 +75,7 @@ class Settings implements ArrayAccess
 
         // Poprawiamy adres URL sklepu
         if (strlen($this->settings['shop_url'])) {
-            if (strpos($this->settings['shop_url'], "http://") !== 0 && strpos($this->settings['shop_url'],
-                    "https://") !== 0) {
+            if (strpos($this->settings['shop_url'], "http://") !== 0 && strpos($this->settings['shop_url'], "https://") !== 0) {
                 $this->settings['shop_url'] = "http://" . $this->settings['shop_url'];
             }
 
@@ -122,7 +121,7 @@ LEFT JOIN `" . TABLE_PREFIX . "payment_code` AS pc ON bs.payment = 'service_code
             date_default_timezone_set($this->settings['timezone']);
         }
 
-        $this->settings['date_format'] = strlen($this->settings['date_format']) ? $this->settings['date_format'] : "Y-m-d H:i";
+        $this->settings['date_format'] = $this->settings['date_format'] ?: "Y-m-d H:i";
 
         // Sprawdzanie czy taki szablon istnieje, jak nie to ustaw defaultowy
         $this->settings['theme'] = file_exists($this->app->path("themes/{$this->settings['theme']}")) ? $this->settings['theme'] : "default";
@@ -132,6 +131,6 @@ LEFT JOIN `" . TABLE_PREFIX . "payment_code` AS pc ON bs.payment = 'service_code
 
     private function prepareValue($key, $value)
     {
-        return strlen($value) ? $value : array_get($this->settings, $key, '');
+        return $value ?: array_get($this->settings, $key, '');
     }
 }
